@@ -46,19 +46,37 @@ struct c_k_f {
 };
 
 
-
 ///////////////////显示//////////////////////////////////////////////////////////////////////////////
-void show_key_cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr key) {
+void show_key_scene(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr key) {
 	// 初始化点云可视化对象
 	pcl::visualization::PCLVisualizer view("3D Viewer");
 	view.setBackgroundColor(255, 255, 255);  //白色背景
 
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud(cloud, 0, 255, 0);//蓝色点云
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud(cloud, 0, 0, 255);//BLUE
 	view.addPointCloud<pcl::PointXYZ>(cloud, color_cloud, "1");
 
 	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_key(key, 255, 0, 0);//关键点
 	view.addPointCloud<pcl::PointXYZ>(key, color_key, "2");
-	view.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "2");
+	view.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,6, "2");
+
+	// 等待直到可视化窗口关闭
+	while (!view.wasStopped())
+	{
+		view.spinOnce(100);
+		boost::this_thread::sleep(boost::posix_time::microseconds(100000));
+	}
+}
+void show_key_model(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr key) {
+	// 初始化点云可视化对象
+	pcl::visualization::PCLVisualizer view("3D Viewer");
+	view.setBackgroundColor(255, 255, 255);  //白色背景
+
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud(cloud, 0,255,0);//GREEN
+	view.addPointCloud<pcl::PointXYZ>(cloud, color_cloud, "1");
+
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_key(key, 255, 0, 0);//关键点
+	view.addPointCloud<pcl::PointXYZ>(key, color_key, "2");
+	view.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 6, "2");
 
 	// 等待直到可视化窗口关闭
 	while (!view.wasStopped())
@@ -68,16 +86,16 @@ void show_key_cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<p
 	}
 }
 
-void show_source_target_cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_target) {
+void show_scene_model_cloud(pcl::PointCloud<pcl::PointXYZ>::Ptr scene_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr model_cloud) {
 	// 初始化点云可视化对象
 	pcl::visualization::PCLVisualizer view("3D Viewer");
 	view.setBackgroundColor(255, 255, 255);  //白色背景
 
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_source(cloud_source, 0, 255, 0);//绿色点云
-	view.addPointCloud<pcl::PointXYZ>(cloud_source, color_source, "1");
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_source(scene_cloud, 0, 255, 0);//绿色点云
+	view.addPointCloud<pcl::PointXYZ>(scene_cloud, color_source, "1");
 
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_target(cloud_target, 0, 0, 255);//蓝色点云
-	view.addPointCloud<pcl::PointXYZ>(cloud_target, color_target, "2");
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_target(model_cloud, 0, 0, 255);//蓝色点云
+	view.addPointCloud<pcl::PointXYZ>(model_cloud, color_target, "2");
 
 	// 等待直到可视化窗口关闭
 	while (!view.wasStopped())
@@ -117,22 +135,23 @@ void show_point_clouds(std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr>& clouds)
 	}
 }
 
-void show_coor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_model, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_scenes,
-	pcl::PointCloud<pcl::PointXYZ> keypoints_model, pcl::PointCloud<pcl::PointXYZ> keypoints_scenes,
-	pcl::PointCloud<pcl::Feature>::Ptr features_model, pcl::PointCloud<pcl::Feature>::Ptr features_scenes,
+void show_coor(pcl::PointCloud<pcl::PointXYZ>::Ptr model_cloud, pcl::PointCloud<pcl::PointXYZ> model_key,
+	pcl::PointCloud<pcl::Feature>::Ptr model_feature,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr scene_cloud, pcl::PointCloud<pcl::PointXYZ> scene_key,
+	pcl::PointCloud<pcl::Feature>::Ptr scene_feature,
 	pcl::CorrespondencesPtr& corr) {
 
 	for (int i = 0; i < corr->size(); i++) {
 		cout << corr->at(i).index_query << "---" << corr->at(i).index_match << "---" << corr->at(i).distance << endl;
-		//pcl::visualization::PCLPlotter plotter;
-		//plotter.addFeatureHistogram<pcl::Feature>(*features_model, "pfh", corr->at(i).index_query);
-		//plotter.addFeatureHistogram<pcl::Feature>(*features_scenes, "pfh", corr->at(i).index_match);
-		std::cout << features_model->points[corr->at(i).index_query] << endl;
-		std::cout << features_scenes->points[corr->at(i).index_match] << endl;
+		pcl::visualization::PCLPlotter plotter;
+		plotter.addFeatureHistogram<pcl::Feature>(*model_feature, "fpfh", corr->at(i).index_query);
+		plotter.addFeatureHistogram<pcl::Feature>(*scene_feature, "fpfh", corr->at(i).index_match);
+		std::cout << model_feature->points[corr->at(i).index_query] << endl;
+		std::cout << scene_feature->points[corr->at(i).index_match] << endl;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints_ptr_model(new pcl::PointCloud<pcl::PointXYZ>());
 		pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints_ptr_scenes(new pcl::PointCloud<pcl::PointXYZ>());
-		keypoints_ptr_model->push_back(keypoints_model.points[corr->at(i).index_query]);
-		keypoints_ptr_scenes->push_back(keypoints_scenes.points[corr->at(i).index_match]);
+		keypoints_ptr_model->push_back(model_key.points[corr->at(i).index_query]);
+		keypoints_ptr_scenes->push_back(scene_key.points[corr->at(i).index_match]);
 		boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
 
 		int v1(0);
@@ -141,16 +160,16 @@ void show_coor(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_model, pcl::PointCloud<
 		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_key_model(keypoints_ptr_model, 255, 0, 0);
 		viewer->addPointCloud<pcl::PointXYZ>(keypoints_ptr_model, color_key_model, "color_key_model", v1);
 		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 10, "color_key_model");
-		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud_model(cloud_model, 0, 255, 0);
-		viewer->addPointCloud<pcl::PointXYZ>(cloud_model, color_cloud_model, "cloud_model", v1);
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud_model(model_cloud, 0, 255, 0);
+		viewer->addPointCloud<pcl::PointXYZ>(model_cloud, color_cloud_model, "cloud_model", v1);
 		int v2(0);
 		viewer->createViewPort(0.5, 0.0, 1.0, 1.0, v2);  //4个参数分别是X轴的最小值，最大值，Y轴的最小值，最大值，取值0-1，v1是标识
 		viewer->setBackgroundColor(255, 255, 255, v2);    //设置视口的背景颜色
 		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_key_scenes(keypoints_ptr_scenes, 255, 0, 0);
 		viewer->addPointCloud<pcl::PointXYZ>(keypoints_ptr_scenes, color_key_scenes, "color_key_scenes", v2);
 		viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 10, "color_key_scenes");
-		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud_scenes(cloud_scenes, 0, 0, 255);
-		viewer->addPointCloud<pcl::PointXYZ>(cloud_scenes, color_cloud_scenes, "cloud_scenes", v2);
+		pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_cloud_scenes(scene_cloud, 0, 0, 255);
+		viewer->addPointCloud<pcl::PointXYZ>(scene_cloud, color_cloud_scenes, "cloud_scenes", v2);
 
 		//plotter.plot();
 		while (!viewer->wasStopped())
@@ -174,19 +193,19 @@ void show_line(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud
 	pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud_source(new pcl::PointCloud<pcl::PointXYZ>);
 	*new_cloud_source = *cloud_source;
 	for (int i = 0; i < cloud_source->size(); i++) {
-		new_cloud_source->points[i].y += 300.0f* leaf_size;
+		new_cloud_source->points[i].x += 300.0f* leaf_size;
 	}
 	for (int i = 0; i < new_key_source->size(); i++) {
-		new_key_source->points[i].y += 300.0f* leaf_size;
+		new_key_source->points[i].x += 300.0f* leaf_size;
 	}
 	pcl::visualization::PCLVisualizer line("line");
 	line.setBackgroundColor(255, 255, 255);
-	line.addPointCloud(cloud_target, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(cloud_target, 0.0, 0, 255.0), "cloud_target");
-	line.addPointCloud(new_cloud_source, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(new_cloud_source, 0.0, 255, 0), "cloud_source");
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>color_new_key_target(new_key_target, 255, 0, 0);//红色关键点
+	line.addPointCloud(cloud_target, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(cloud_target, 0, 255, 0), "cloud_target");
+	line.addPointCloud(new_cloud_source, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(new_cloud_source, 0, 0, 255), "cloud_source");
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>color_new_key_target(new_key_target, 255, 0, 0);
 	line.addPointCloud<pcl::PointXYZ>(new_key_target, color_new_key_target, "new_key_target");
 	line.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "new_key_target");
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_new_key_source(new_key_source, 255, 0, 0);//红色关键点
+	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> color_new_key_source(new_key_source, 255, 0, 0);
 	line.addPointCloud<pcl::PointXYZ>(new_key_source, color_new_key_source, "new_key_source");
 	line.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "new_key_source");
 
@@ -194,8 +213,8 @@ void show_line(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud
 	{
 		pcl::PointXYZ source_point = new_key_source->points[i];
 		pcl::PointXYZ target_point = new_key_target->points[i];
-		line.addLine(source_point, target_point, 255, 0, 255, std::to_string(i));
-		line.setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, std::to_string(i));
+		line.addLine(source_point, target_point, 0, 0, 0, std::to_string(i));
+		line.setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 2, std::to_string(i));
 	}
 	line.spin();
 }
@@ -215,17 +234,17 @@ void show_line(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud
 	*new_cloud_source = *cloud_source;
 	for (int i = 0; i < new_cloud_source->size(); i++) {
 		new_cloud_source->points[i].x += 300.0f* leaf_size;
-		new_cloud_source->points[i].y += 300.0f* leaf_size;
+		//new_cloud_source->points[i].y += 300.0f* leaf_size;
 	}
 	for (int i = 0; i < new_key_source->size(); i++) {
 		new_key_source->points[i].x += 300.0f* leaf_size;
-		new_key_source->points[i].y += 300.0f* leaf_size;
+		//new_key_source->points[i].y += 300.0f* leaf_size;
 	}
 	////////////////////显示对应点连线//////////////////////////////////////////////////////////////////////
 	pcl::visualization::PCLVisualizer line("line");
 	line.setBackgroundColor(255, 255, 255);
-	line.addPointCloud(new_cloud_source, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(new_cloud_source, 0, 255, 0), "new_cloud_source");
-	line.addPointCloud(cloud_target, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(cloud_target, 0, 0, 255), "cloud_target");
+	line.addPointCloud(new_cloud_source, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(new_cloud_source, 0, 0, 255), "new_cloud_source");
+	line.addPointCloud(cloud_target, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(cloud_target, 0, 255, 0), "cloud_target");
 
 	line.addPointCloud<pcl::PointXYZ>(new_key_source, pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ>(new_key_source, 255, 0, 0), "new_key_source");
 	line.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "new_key_source");
@@ -675,7 +694,7 @@ std::vector<int> ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::P
 	align.setSourceFeatures(feature_source);
 	align.setInputTarget(key_target);
 	align.setTargetFeatures(feature_target);
-	align.setMaximumIterations(10000); // Number of RANSAC iterations
+	align.setMaximumIterations(1000); // Number of RANSAC iterations
 	align.setNumberOfSamples(3); // Number of points to sample for generating/prerejecting a pose
 	align.setCorrespondenceRandomness(3); // Number of nearest features to use
 	align.setSimilarityThreshold(0.9f); // Polygonal edge length similarity threshold
@@ -693,17 +712,18 @@ std::vector<int> ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::P
 }
 
 ///////////////////ICP/////////////////////////////////////////////
-void icp(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_target, float& leaf_size, Eigen::Matrix4f& trans) {
+void my_icp(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_target, float& leaf_size, Eigen::Matrix4f& trans) {
+
 	pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
 	icp.setInputSource(cloud_source);
 	icp.setInputTarget(cloud_target);
 	icp.setTransformationEpsilon(0.1*leaf_size);
 	icp.setMaxCorrespondenceDistance(5.0f * leaf_size);
-	icp.setMaximumIterations(50000);
+	icp.setMaximumIterations(300);
 	icp.align(*cloud_source);
 	//std::cout << "icp分数： " << icp.getFitnessScore(1.0f*leaf_size) << std::endl;
 	Eigen::Matrix4f TR = icp.getFinalTransformation();
-	pcl::transformPointCloud(*cloud_source, *cloud_source, TR);
+	//pcl::transformPointCloud(*cloud_source, *cloud_source, TR);
 	trans = trans * TR;
 }
 
@@ -715,80 +735,97 @@ bool cmp(i_p_t a, i_p_t b) {
 	return a.percent > b.percent;
 }
 
-void my_align(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source0, pcl::PointCloud<pcl::PointXYZ>::Ptr key_source0,
-	pcl::PointCloud<pcl::Feature>::Ptr features_source0, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_target,
-	pcl::PointCloud<pcl::PointXYZ>::Ptr key_target, pcl::PointCloud<pcl::Feature>::Ptr features_target,
+void my_align(pcl::PointCloud<pcl::PointXYZ>::Ptr scene_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr scene_key,
+	pcl::PointCloud<pcl::Feature>::Ptr scene_feature,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr model_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr model_key,
+	pcl::PointCloud<pcl::Feature>::Ptr model_feature,
 	float leaf_size, int i = 0) {
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source(new pcl::PointCloud<pcl::PointXYZ>);
-	*cloud_source = *cloud_source0;
-	pcl::PointCloud<pcl::PointXYZ>::Ptr key_source(new pcl::PointCloud<pcl::PointXYZ>);
-	*key_source = *key_source0;
-	pcl::PointCloud<pcl::Feature>::Ptr features_source(new pcl::PointCloud<pcl::Feature>);
-	*features_source = *features_source0;
-	//double start = 0, end = 0;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr scene_cloud0(new pcl::PointCloud<pcl::PointXYZ>);
+	*scene_cloud0 = *scene_cloud;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr scene_key0(new pcl::PointCloud<pcl::PointXYZ>);
+	*scene_key0 = *scene_key;
+	pcl::PointCloud<pcl::Feature>::Ptr scene_feature0(new pcl::PointCloud<pcl::Feature>);
+	*scene_feature0 = *scene_feature;
 	i_p_t result;
 	result.i = i;
 	////////////////////初始对应关系估计////////////////////////////////////////////////////////////////////////
+	//double start = 0, end = 0;
 	//start = GetTickCount();
-	pcl::CorrespondencesPtr corr(new pcl::Correspondences());
-	*corr = *com_corr3(cloud_source, key_source, features_source, cloud_target, key_target, features_target, 0.2f, 5.0f*leaf_size, 30);
-	if (corr->size() < 3) {
+	pcl::CorrespondencesPtr first_corr(new pcl::Correspondences());
+	*first_corr = *com_corr3(scene_cloud0, scene_key0, scene_feature0, model_cloud, model_key, model_feature, 0.2f, 5.0f*leaf_size, 30);
+	show_line(scene_cloud0, model_cloud, scene_key0, model_key, first_corr, leaf_size);
+	//end = GetTickCount();
+	//show_coor(cloud_source, cloud_target, *key_source, *key_target, features_source, features_target, corr);
+	//cout << "初始对应关系数目：" << corr->size() << endl;
+	//cout << "初始对应关系估计：" << end - start << "ms" << endl;
+	//show_line(cloud_source, cloud_target, key_source, key_target, corr, leaf_size);
+	if (first_corr->size() < 10) {
 		results.push_back(result);
 		return;
 	}
 	pcl::registration::CorrespondenceRejectorOneToOne corr_est;
-	corr_est.setInputCorrespondences(corr);
-	corr_est.getRemainingCorrespondences(*corr, *corr);
-	//end = GetTickCount();
-	if (corr->size() < 3) {
+	corr_est.setInputCorrespondences(first_corr);
+	corr_est.getRemainingCorrespondences(*first_corr, *first_corr);
+	if (first_corr->size() < 10) {
 		results.push_back(result);
 		return;
 	}
-	//cout << "初始对应关系数目：" << corr->size() << endl;
-	//cout << "初始对应关系估计：" << end - start << "ms" << endl;
-	//show_line(cloud_source, cloud_target, key_source, key_target, corr, leaf_size);
-	/////////////////////提取初始对应关系关键点和特征///////////////////////////////////////////////////////////////////////
-	pcl::PointCloud<pcl::PointXYZ>::Ptr new_key_source(new pcl::PointCloud<pcl::PointXYZ>());
-	pcl::PointCloud<pcl::PointXYZ>::Ptr new_key_target(new pcl::PointCloud<pcl::PointXYZ>());
-	pcl::PointCloud<pcl::Feature>::Ptr new_feature_source(new pcl::PointCloud<pcl::Feature>);
-	pcl::PointCloud<pcl::Feature>::Ptr new_feature_target(new pcl::PointCloud<pcl::Feature>);
-	for (int i = 0; i < corr->size(); i++) {
-		new_key_source->push_back(key_source->points[corr->at(i).index_query]);
-		new_key_target->push_back(key_target->points[corr->at(i).index_match]);
-		new_feature_source->push_back(features_source->points[corr->at(i).index_query]);
-		new_feature_target->push_back(features_target->points[corr->at(i).index_match]);
-	}
-	vector<int> corr2;
-	corr2 = ransac(cloud_source, new_key_source, new_feature_source, cloud_target, new_key_target, new_feature_target, leaf_size, result.trans);
-	icp(cloud_source, cloud_target, leaf_size, result.trans);
 
-	result.percent = com_overlap_rate(cloud_source, cloud_target, 5.0f*leaf_size);
+	/////////////////////提取初始对应关系关键点和特征///////////////////////////////////////////////////////////////////////
+	//start = GetTickCount();
+	pcl::PointCloud<pcl::PointXYZ>::Ptr scene_key_in_first_corr(new pcl::PointCloud<pcl::PointXYZ>());
+	pcl::PointCloud<pcl::PointXYZ>::Ptr model_key_in_first_corr(new pcl::PointCloud<pcl::PointXYZ>());
+	pcl::PointCloud<pcl::Feature>::Ptr scene_feature_in_first_corr(new pcl::PointCloud<pcl::Feature>);
+	pcl::PointCloud<pcl::Feature>::Ptr model_feature_in_first_corr(new pcl::PointCloud<pcl::Feature>);
+	for (int i = 0; i < first_corr->size(); i++) {
+		scene_key_in_first_corr->push_back(scene_key0->points[first_corr->at(i).index_query]);
+		model_key_in_first_corr->push_back(model_key->points[first_corr->at(i).index_match]);
+		scene_feature_in_first_corr->push_back(scene_feature0->points[first_corr->at(i).index_query]);
+		model_feature_in_first_corr->push_back(model_feature->points[first_corr->at(i).index_match]);
+	}
+	vector<int> final_corr;
+	final_corr = ransac(scene_cloud0, scene_key_in_first_corr, scene_feature_in_first_corr,
+		model_cloud, model_key_in_first_corr, model_feature_in_first_corr, leaf_size, result.trans);
+	show_line(scene_cloud0, scene_key_in_first_corr, model_cloud, model_key_in_first_corr, final_corr, leaf_size);
+	/*end = GetTickCount();
+	cout << "ransac corr：" << end - start << "ms" << endl;
+
+	start = GetTickCount();*/
+	pcl::PointCloud<pcl::PointXYZ>::Ptr scene_cloud0_filter(new pcl::PointCloud<pcl::PointXYZ>);
+	*scene_cloud0_filter = *voxel_grid(scene_cloud0, 10 * leaf_size);
+	my_icp(scene_cloud0_filter, model_cloud, leaf_size, result.trans);
+	//end = GetTickCount();
+	//cout << "icp：" << end - start << "ms" << endl;
+	//start = GetTickCount();
+	result.percent = com_overlap_rate(scene_cloud0_filter, model_cloud, 5.0f*leaf_size);
 	result.trans = result.trans.inverse().eval();
 	m.lock();
 	results.push_back(result);
 	m.unlock();
+	//end = GetTickCount();
+	//cout << "com_overlap_rate：" << end - start << "ms" << endl;
 	return;
 }
 
 
 
-i_p_t predict(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source, pcl::PointCloud<pcl::PointXYZ>::Ptr key_source,
-	pcl::PointCloud<pcl::Feature>::Ptr feature_source,
-	vector<string> names, vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> models_ptr,
-	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> keys_ptr,
-	vector<pcl::PointCloud<pcl::Feature>::Ptr> features_ptr, float leaf_size = 1) {
+i_p_t predict(pcl::PointCloud<pcl::PointXYZ>::Ptr scene_cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr scene_key,
+	pcl::PointCloud<pcl::Feature>::Ptr scene_feature,
+	vector<string> names, vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> model_clouds,
+	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> model_keys,
+	vector<pcl::PointCloud<pcl::Feature>::Ptr> model_features, float leaf_size = 1) {
 
 	//double start = 0;
 	//double end = 0;
 	//start = GetTickCount();
 	results.clear();
 	for (int i = 0; i < names.size(); i++) {
-		thread t(my_align, cloud_source, key_source, feature_source, models_ptr[i], keys_ptr[i], features_ptr[i], leaf_size, i);
+		thread t(my_align, scene_cloud, scene_key, scene_feature, model_clouds[i], model_keys[i], model_features[i], leaf_size, i);
 		t.detach();
 	}
 	while (results.size() != names.size()) {
-		Sleep(100);
+		Sleep(10);
 	}
 	//end = GetTickCount();
 	//cout << "识别时间：" << end - start << "ms" << endl;
@@ -831,7 +868,7 @@ void com_k_f(vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds, float leaf_size
 		t.detach();
 	}
 	while (clouds_keys_features.size() != clouds.size()) {
-		Sleep(100);
+		Sleep(10);
 	}
 	return;
 }
@@ -882,49 +919,223 @@ void com_k_f(vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds, float leaf_size
 //	return 0;
 //}
 
-////////////////////////识别///////////////////////////////////////////////////////////////////////////////////////////
-int main(int argc, char** argv) {
-	vector<string> names = { "armadillo", "bunny", "cat","centaur","cheff", "chicken","david","dog", "dragon","face",
-	"ganesha","gorilla","horse","para" ,"trex","wolf" };
+//随即旋转平移
+pcl::PointCloud<pcl::PointXYZ>::Ptr random_transform(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+	float rx, ry, rz, tx, ty, tz;
+	rx = rand() % 360;
+	ry = rand() % 360;
+	rz = rand() % 360;
+	tx = rand() % 60 - 30;
+	ty = rand() % 60 - 30;
+	tz = rand() % 60 - 30;
+	rx = rx / 180.0f*M_PI;
+	ry = ry / 180.0f*M_PI;
+	rz = rz / 180.0f*M_PI;
+	Eigen::Affine3f RT = Eigen::Affine3f::Identity();
+	RT.rotate(Eigen::AngleAxisf(rx, Eigen::Vector3f::UnitX()));
+	RT.rotate(Eigen::AngleAxisf(ry, Eigen::Vector3f::UnitY()));
+	RT.rotate(Eigen::AngleAxisf(rz, Eigen::Vector3f::UnitZ()));
+	RT.translation() << tx, ty, tz;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::transformPointCloud(*cloud, *cloud_out, RT);
+	return cloud_out;
+}
 
-	//	vector<string> names = { "armadillo", "bunny", "cat","centaur","cheff", "chicken","david","dog", "dragon","face",
-	//		"ganesha","gorilla","gun","horse","lioness","para" ,"trex","victoria","wolf" };
+//////////////////////识别///////////////////////////////////////////////////////////////////////////////////////////
+//int main(int argc, char** argv) {
+//	vector<string> names = { "armadillo", "bunny", "cat","centaur","cheff", "chicken","david","dog", "dragon","face",
+//	"ganesha","gorilla","horse","para" ,"trex","wolf" };
+//
+//	//	vector<string> names = { "armadillo", "bunny", "cat","centaur","cheff", "chicken","david","dog", "dragon","face",
+//	//		"ganesha","gorilla","gun","horse","lioness","para" ,"trex","victoria","wolf" };
+//
+//	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> models;
+//	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> keys;
+//	vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> features;
+//	for (int i = 0; i < names.size(); i++) {
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr model(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr key(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::PointCloud<pcl::FPFHSignature33>::Ptr feature(new pcl::PointCloud<pcl::FPFHSignature33>);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/filter/" + names[i] + ".ply", *model);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/key/" + names[i] + "_key.ply", *key);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/feature/" + names[i] + "_feature.ply", *feature);
+//		models.push_back(model);
+//		keys.push_back(key);
+//		features.push_back(feature);
+//	}
+//	vector<vector<int>> res(names.size(), vector<int>(names.size(), 0));
+//	int c = 0;
+//	cout << "输入识别次数：";
+//	cin >> c;
+//
+//	int noise = 0;
+//	cout << "输入噪声：";
+//	cin >> noise;
+//
+//	for (int k = 0; k < names.size();k++) {
+//		string name;
+//		name = names[k];
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr scenes(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/scene/filter/" + name + ".ply", *scenes);
+//		int num = 0;
+//		float t = 0;
+//		for (int i = 0; i < c; i++) {
+//			//show_point_cloud(scenes);
+//			//show_point_cloud(scenes_temp);
+//			float t1, t2, t3, t4;
+//			t1 = GetTickCount();
+//			vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds;
+//			float leaf_size = 1.0f;
+//			clouds.push_back(add_gaussian_noise(random_transform(scenes), noise));
+//			////////////////特征提取/////////////////////////////////////////////////
+//			t2 = GetTickCount();
+//			vector<i_p_t> result_final;
+//			com_k_f(clouds, leaf_size);
+//			/////////////////场景识别//////////////////////////////////////////////////////////
+//			t3 = GetTickCount();
+//			for (int i = 0; i < clouds.size(); i++) {
+//				result_final.push_back(predict(clouds_keys_features[i].cloud, clouds_keys_features[i].key,
+//					clouds_keys_features[i].feature, names, models, keys, features));
+//				if (result_final[i].percent > 0.9) {
+//					cout << names[result_final[i].i] << endl;
+//					res[result_final[i].i][k]++;
+//					if (names[result_final[i].i] == name) {
+//						num++;
+//					}
+//				}
+//				else
+//					cout << "nnnnnnnnnn" << endl;
+//			}
+//			t4 = GetTickCount();
+//			cout << "随机变换时间：" << (t2 - t1) << "ms" << endl;
+//			cout << "计算特征时间：" << (t3 - t2) << "ms" << endl;
+//			cout << "识别时间：" << (t4 - t3) << "ms" << endl;
+//			cout << "////////////////////////////////////////////////////////" << endl;
+//			t += t4 - t1;
+//			//show_point_clouds(clouds);
+//			//show_point_clouds_and_trans_models(clouds, models, result_final);
+//		}
+//		cout << name << "的识别率：" << (float)num / (float)c*100.0f << "%" << endl;
+//		cout << name << "平均识别时间：" << t / (float)c << "ms" << endl;
+//		cout << "////////////////////////////////////////////////////////" << endl;
+//	}
+//	for (int i = 0; i < names.size(); i++) {
+//		for (int j = 0; j < names.size(); j++) {
+//			cout << res[i][j] << " ";
+//		}
+//		cout << endl;
+//	}
+//	return 0;
+//}
 
-	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> models;
-	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> keys;
-	vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> features;
-	for (int i = 0; i < names.size(); i++) {
-		pcl::PointCloud<pcl::PointXYZ>::Ptr model(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::PointCloud<pcl::PointXYZ>::Ptr key(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::PointCloud<pcl::FPFHSignature33>::Ptr feature(new pcl::PointCloud<pcl::FPFHSignature33>);
-		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/filter/" + names[i] + ".ply", *model);
-		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/key/" + names[i] + "_key.ply", *key);
-		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/feature/" + names[i] + "_feature.ply", *feature);
-		models.push_back(model);
-		keys.push_back(key);
-		features.push_back(feature);
+//int main(int argc, char** argv) {
+//	vector<string> names = { "armadillo", "bunny", "cat","centaur","cheff", "chicken","david","dog", "dragon","face",
+//	"ganesha","gorilla","horse","para" ,"trex","wolf" };
+//
+//	//	vector<string> names = { "armadillo", "bunny", "cat","centaur","cheff", "chicken","david","dog", "dragon","face",
+//	//		"ganesha","gorilla","gun","horse","lioness","para" ,"trex","victoria","wolf" };
+//
+//	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> models;
+//	vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> keys;
+//	vector<pcl::PointCloud<pcl::FPFHSignature33>::Ptr> features;
+//	for (int i = 0; i < names.size(); i++) {
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr model(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr key(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::PointCloud<pcl::FPFHSignature33>::Ptr feature(new pcl::PointCloud<pcl::FPFHSignature33>);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/filter/" + names[i] + ".ply", *model);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/key/" + names[i] + "_key.ply", *key);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/feature/" + names[i] + "_feature.ply", *feature);
+//		models.push_back(model);
+//		keys.push_back(key);
+//		features.push_back(feature);
+//	}
+//	string name;
+//	cout << "输入场景点云：";
+//	while (cin >> name) {
+//		pcl::PointCloud<pcl::PointXYZ>::Ptr scenes(new pcl::PointCloud<pcl::PointXYZ>);
+//		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/scene/filter/" + name + ".ply", *scenes);
+//		int num = 0;
+//		float t = 0;
+//		int c = 0;
+//		cout << "输入识别次数：";
+//		cin >> c;
+//		for (int i = 0; i < c; i++) {
+//			pcl::PointCloud<pcl::PointXYZ>::Ptr scenes_temp(new pcl::PointCloud<pcl::PointXYZ>);
+//			scenes_temp = random_transform(scenes);
+//			//show_point_cloud(scenes);
+//			//show_point_cloud(scenes_temp);
+//			float t1, t2, t3, t4;
+//			///////////////欧式聚类////////////////////////////////////////
+//			t1 = GetTickCount();
+//			vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds;
+//			float leaf_size = 1.0f;
+//			clouds = euclidean_cluster(scenes_temp, 10.0f*leaf_size);
+//			////////////////特征提取/////////////////////////////////////////////////
+//			t2 = GetTickCount();
+//			vector<i_p_t> result_final;
+//			com_k_f(clouds, leaf_size);
+//			/////////////////场景识别//////////////////////////////////////////////////////////
+//			t3 = GetTickCount();
+//			for (int i = 0; i < clouds.size(); i++) {
+//				result_final.push_back(predict(clouds_keys_features[i].cloud, clouds_keys_features[i].key,
+//					clouds_keys_features[i].feature, names, models, keys, features));
+//				if (result_final[i].percent > 0.9) {
+//					cout << names[result_final[i].i] << endl;
+//					if (names[result_final[i].i] == name) {
+//						num++;
+//					}
+//				}
+//				else
+//					cout << "nnnnnnnnnn" << endl;
+//			}
+//			t4 = GetTickCount();
+//			cout << "欧式聚类时间：" << (t2 - t1) << "ms" << endl;
+//			cout << "计算特征时间：" << (t3 - t2) << "ms" << endl;
+//			cout << "识别时间：" << (t4 - t3) << "ms" << endl;
+//			cout << "////////////////////////////////////////////////////////" << endl;
+//			t += t4 - t1;
+//			//show_point_clouds(clouds);
+//			//show_point_clouds_and_trans_models(clouds, models, result_final);
+//		}
+//		cout << name << "的识别率：" << (float)num / (float)c*100.0f << "%" << endl;
+//		cout << name << "平均识别时间：" << t / (float)c << "ms" << endl;
+//		cout << "////////////////////////////////////////////////////////" << endl;
+//	}
+//
+//	return 0;
+//}
+
+///////////////////配准
+int main() {
+	string model_name, scene_name;
+	float leaf_size = 1.0f;
+	float noise = 0;
+	while (cin >>  model_name>> noise) {
+		//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_scene(new pcl::PointCloud<pcl::PointXYZ>);
+		//pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/scene/filter/" + scene_name + ".ply", *cloud_scene);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_model(new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/model/filter/" + model_name + ".ply", *cloud_model);
+		*cloud_model = *add_gaussian_noise(cloud_model, noise);
+
+		pcl::PointCloud<pcl::Normal>::Ptr normal_model(new pcl::PointCloud<pcl::Normal>);
+		*normal_model = *normal_estimation_OMP(cloud_model, 5.0f*leaf_size);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr key_model(new pcl::PointCloud<pcl::PointXYZ>);
+		*key_model = *key_detect(cloud_model, normal_model, 5.0f*leaf_size, 5.0f * leaf_size);
+		cout << "模型关键点：" << key_model->size() << endl;
+		pcl::PointCloud<pcl::FPFHSignature33>::Ptr feature_model(new pcl::PointCloud<pcl::FPFHSignature33>);
+		*feature_model = *com_lsfh33_feature(cloud_model, normal_model, key_model, 10.0f*leaf_size);
+
+		//pcl::PointCloud<pcl::Normal>::Ptr normal_scene(new pcl::PointCloud<pcl::Normal>);
+		//*normal_scene = *normal_estimation_OMP(cloud_scene, 5.0f*leaf_size);
+		//pcl::PointCloud<pcl::PointXYZ>::Ptr key_scene(new pcl::PointCloud<pcl::PointXYZ>);
+		//*key_scene = *key_detect(cloud_scene, normal_scene, 5.0f*leaf_size, 5.0f * leaf_size);
+		//cout << "场景关键点：" << key_scene->size() << endl;
+		//pcl::PointCloud<pcl::FPFHSignature33>::Ptr feature_scene(new pcl::PointCloud<pcl::FPFHSignature33>);
+		//*feature_scene = *com_lsfh33_feature(cloud_scene,  normal_scene,key_scene, 10.0f*leaf_size);
+		//show_key_scene(cloud_scene, key_scene);
+		show_key_model(cloud_model, key_model);
+		//my_align(cloud_scene, key_scene, feature_scene, cloud_model, key_model, feature_model, leaf_size);
+
 	}
-	string name;
-	while (cin >> name) {
-		pcl::PointCloud<pcl::PointXYZ>::Ptr scenes(new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::io::loadPLYFile("D:/PCD/识别点云角度修正/scene/filter/" + name + ".ply", *scenes);
-		vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clouds;
-		float leaf_size = 1.0f;
-		clouds = euclidean_cluster(scenes, 10.0f*leaf_size);
-		vector<i_p_t> result_final;
-		com_k_f(clouds, leaf_size);
-
-		for (int i = 0; i < clouds.size(); i++) {
-			result_final.push_back(predict(clouds_keys_features[i].cloud, clouds_keys_features[i].key,
-				clouds_keys_features[i].feature, names, models, keys, features));
-			if (result_final[i].percent > 0.8)
-				cout << names[result_final[i].i] << endl;
-			else
-				cout << "nnnnnnnnnn" << endl;
-		}
-		show_point_clouds(clouds);
-		show_point_clouds_and_trans_models(clouds, models, result_final);
-	}
-
 	return 0;
 }
